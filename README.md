@@ -7,7 +7,7 @@ In this project, we will implement the algorithms, change the client side into t
 Now, we have finished deploying Auditor on AWS and complete the code of Auditee. The system can successfully run. Here are two pictures to describe the process of the system. 
 
 ![notarize process](http://github.com/TYW49/14760-TLSNotary/raw/master/img/notarize.jpg)
-![review process](http://github.com/TYW49/14760-TLSNotary/raw/master/img/nreview file.jpg)
+![review process](http://github.com/TYW49/14760-TLSNotary/raw/master/img/review.jpg)
 
 **Steps**
 
