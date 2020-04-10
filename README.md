@@ -8,6 +8,7 @@ Now, we have finished deploying Auditor on AWS and complete the code of Auditee.
 
 ![image](https://github.com/TYW49/14760-TLSNotary/blob/master/img/notarize.jpg)
 ![image](https://github.com/TYW49/14760-TLSNotary/blob/master/img/review.jpg)
-
+![image](https://github.com/TYW49/14760-TLSNotary/blob/master/img/url.jpg)
+![image](https://github.com/TYW49/14760-TLSNotary/blob/master/img/file.jpg)
 
 
