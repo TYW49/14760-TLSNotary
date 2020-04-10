@@ -1,0 +1,11 @@
+*.pyc
+db.sqlite3
+migrations
+.DS_Store
+*.swp
+*~
+.vscode
+images/
+*.pem
+config.ini
+.idea/
