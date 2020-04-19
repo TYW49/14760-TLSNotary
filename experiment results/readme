@@ -1,0 +1,5 @@
+This folder contains all experiment data.
+
+sites_50 and sites_500 are the top 50 and 500 websites from www.alexa.com/topsites respectively.
+
+Others are delay tests on different websites with different reliable sites.
