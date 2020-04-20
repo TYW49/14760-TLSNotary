@@ -4,8 +4,8 @@ from __future__ import print_function
 from base64 import b64decode, b64encode
 from hashlib import md5, sha1, sha256
 from os.path import join
-from oracle import oracle_modulus
-import binascii, hmac, os, platform,  tarfile
+from oracles import oracle_modulus
+import binascii, hmac, os, platform, tarfile
 import random, re, sys, time, zipfile
 import OpenSSL
 import cryptography
@@ -85,6 +85,14 @@ def extract_audit_data(audit_filename):
         html = html[:-2]
         print("html len:",len(html))
         audit_data['html'] = html
+#        header = f.readline()
+#        if header != 'notarization binary data\n':
+#            return False, "Invalid file format binary data header"
+#        version = f.read(2)
+#        if version != '\x00\x02':
+#            raise Exception("Incompatible file version")
+#        audit_data['url_length']= shared.ba2int(f.read(2))
+#        audit_data['url'] = f.read(audit_data['url_length'])
         audit_data['cipher_suite'] = shared.ba2int(f.read(2))
         audit_data['client_random'] = f.read(32)
         audit_data['server_random'] = f.read(32)
@@ -163,6 +171,7 @@ def review(audit_filename):
     #    server_name = cert.get_subject().CN
         print("audit_data server:", audit_data['host'])
         server_name = audit_data['host']
+    #    print("is rsapublickey:",isinstance(cert.get_pubkey().to_cryptography_key(), cryptography.hazmat.primitives.asymmetric.rsa.RSAPublicKey))
         server_mod = cert.get_pubkey().to_cryptography_key().public_numbers().n
     #    print("extrct public_key mod:", server_mod)
 
@@ -179,10 +188,21 @@ def review(audit_filename):
             cert_cn_arrays = cert_cn.split(".")
             cert_cn = cert_cn_arrays[-2]
         print("cert CN:",cert_cn)
+
+    #    if not server_name.endswith(cert_cn):
+    #    if cert_cn not in server_name:
+    #        review_result += "Valid Host name: False\n"
+    #        return False, review_result, None
+    #    else:
+    #        review_result += "Valid Host name: True\n"
         print ('Processing data for server:', server_name)
-
+    #    if server_name.strip() != audit_data['host'].strip():
+    #        return False, "host name not match"
         public_hex = binascii.hexlify(shared.bi2ba(server_mod))
-
+    #    if  server_name.startswith("*."):
+    #        short = server_name[2:]
+    #        url_openssl = "free-api."+short
+    #        print ('Processing data for server:', server_name)
         cipher_key = audit_data['cipher_suite']
         cipher_suites = shared.tlsn_cipher_suites
         chosen_cipher = cipher_suites[cipher_key][0]
@@ -231,7 +251,7 @@ def review(audit_filename):
     try:
         audit_session = shared.TLSNClientSession(ccs=audit_data['cipher_suite'],tlsver=audit_data['tlsver'])
         first_cert_len = shared.ba2int(audit_data['certs'][:3])
-
+    #    server_mod, server_exp = audit_session.extract_mod_and_exp(certDER=audit_data['certs'][3:3+first_cert_len], sn=True)
         data_to_be_verified = audit_data['commit_hash'] + audit_data['pms2'] + shared.bi2ba(server_mod) + audit_data['audit_time']
         data_to_be_verified = sha256(data_to_be_verified).digest()
         if not shared.verify_signature(data_to_be_verified, audit_data['signature'],oracle_int_modulus):
@@ -286,18 +306,29 @@ def review(audit_filename):
     except Exception as e:
         review_result += "Valid decrypted response content: False\n"
         return False, review_result, None
-
+    #5 Display html + success.
+    # current_session_dir = os.getcwd()
+    # with open(join(current_session_dir,'audited.html'),'wb') as f:
+    #    f.write(plaintext)
+    # # print out the info about the domain
+    # n_hexlified = binascii.hexlify(shared.bi2ba(server_mod))
+    # print("pubkey string:"+n_hexlified)
+    # #pubkey in the format 09 56 23 ....
+    # n_write = " ".join(n_hexlified[i:i+2] for i in range(0, len(n_hexlified), 2))
+    # with open(join(current_session_dir,'domain_data.txt'), 'wb') as f:
+    #    f.write('Server name: '+audit_session.server_name + '\n\n'+'Server pubkey:' + '\n\n' + n_write+'\n')
     return True, review_result, plaintext
 
 if __name__ == "__main__":
     cmd = sys.argv[1]
     audit_filename = sys.argv[2]
+    #for md5 hash, see https://pypi.python.org/pypi/<module name>/<module version>
 
     if cmd == "review":
         ok, result, html = review(audit_filename)
     else:
         ok, html = convert(audit_filename)
-        
+
     if ok:
         print(html)
     else:

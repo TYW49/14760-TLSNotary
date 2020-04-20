@@ -1,4 +1,4 @@
-from flask import request, Flask, abort, jsonify, send_from_directory
+from flask import request, Flask, abort, jsonify, send_from_directory, render_template
 import os, json, requests
 import notarize
 import reviewer
@@ -11,31 +11,70 @@ app = Flask(__name__)
 PROOF_DIR = "proofs"
 data_dir = os.path.dirname(os.path.realpath(__file__))
 PROOF_DIR = os.path.join(data_dir, PROOF_DIR)
-
-oracle_modulus = "A9A42A3EA62554863CE1FB13CE49A7378E3C77AC5B3E560E14E57E6BBAEAD64334EB0C7D43F29610277F3C9EC127E51228996BFB38154F8D35667F645DE5B9C4D85B5D5F5579CDE8E079C8FA898CFB809F7D43A5DA8D0BED4AD61D46092EB09C1A21FF8B65C861FC923D3D644A67C363C79E27CD90C49ECF53B11B4B7B821523FF29E0282203EE01B13AFE8BBED62A664AC8EB7B1485960DE4B24FC36407D7D495F62B90ED4C88E7AE10DE755823F2093A983E36D41598E6EB28238C8FBA8F7B1E47AA35DF72D5C8BF60F1E26BE5135ED6A99DB0A3BD0372F6658ECC7FBC09E9F06B21CD1665BE4A3ADD2A645E8118B33FE01610883924EBB8A3F772153D17FABC64573588015D4CE8C65775574FDBE1D5E692FE5423BC92F4D2D8749387DB0D87EAE1037318FE3A62D69AAFDA08999981BA7F50B1B20BA85045689523B9D5822BC55AAEEC93DBDF60B9970F016FB0E379D42E2F8B639534661CA9B9A70ED52E94546C4DC49E2C6FE2658B97929DCC71E4975B79896B1C90BF165EEC26EA671B5BFD59BDA6719B49B9EB72E6249E989336A9A60823A545C7D86AF5AE5029ED55AFF05B1797675326227638AF828C1FBA881504C792AF5B23CECEFB626C0CBACD9AEBD77029A958960CD79C969DD992FC2FA07973D5295AD70978B8C477E204827D5BEABB0248CDBFDC23F5D600270E9AC628ED822D83C7BD794561197E120E51"
-
-@app.route('/generate', methods=['POST'])
-def generate():
+# this is a all in one function,
+# generate a proof
+# review the proof
+# post the proof to a public ipfs gateway
+@app.route('/foo', methods=['POST'])
+def foo():
     if request.method == 'POST':
         args = request.json
         print("args:" + json.dumps(args))
         header = args.get("header")
         target = args.get('target')
-        try:
-            ok, prooffile = notarize.generate(target, header)
-        except Exception as e:
-            print(e)
-            return "The cipher suites of this server are not supported", 500
+        ok, filename = notarize.generate(target, header)
+#        ok, content = review(target, header)
+        if not ok:
+            return filename, 400
+        filepath = os.path.join(PROOF_DIR, filename)
+        ok, report, html = reviewer.review(filepath)
+        result = {
+            "filename": filename,
+            "report": report,
+            "html": html.decode().encode("utf-8")
+        }
         if ok:
-            return prooffile, 200
+            return json.dumps(result,ensure_ascii=False,encoding="utf-8"), 200
+        else:
+            return json.dumps(result), 400
 
-    return result, 500
+@app.route('/generate', methods=['POST', 'GET'])
+def generate():
+    if request.method == 'GET':
+        return render_template('generate_proof.html')
+    if request.method == 'POST':
+        target = request.form['url']
+        try:
+            ok, prooffile = notarize.generate(target, None)
+        except Exception as e:
+            # return render_template('generate_proof.html', result = "The cipher suites of this server are not supported", ok = "False")
+            return render_template('generate_proof.html', result="www." + target + ":  " + " Failed to generate the proof file !",
+                                   ok="False")
+        if ok:
+            return render_template('generate_proof.html', result = ('Proof File Name: ' + prooffile), ok = "True", url = target)
+        else:
+            return render_template('generate_proof.html', result = prooffile, ok = "False")
 
 @app.route('/download/<filename>', methods=['GET', 'POST'])
 def download(filename):
     """Download a file."""
     return send_from_directory(PROOF_DIR, filename, as_attachment=True)
 
+
+@app.route('/ipfs/<filename>', methods=['GET', 'POST'])
+def ipfs(filename):
+    with open(os.path.join(PROOF_DIR, filename)) as fp:
+        content = fp.read()
+
+    response = requests.post(
+        'https://www.nondual.ga/peace/', data=content
+    )
+#    print("reponse:", repr(response.headers))
+    full_location = response.headers["Location"]
+    location = full_location[6:]
+#    print("location:",location)
+    url = "https://www.nondual.ga/peace/"+location
+    return url, 200
 
 @app.route('/upload', methods=['POST'])
 def upload(filename):
@@ -50,13 +89,20 @@ def upload(filename):
     # Return 201 CREATED
     return filename, 201
 
-@app.route('/review/<filename>', methods=['GET', 'POST'])
-def review(filename):
-    filepath = os.path.join(PROOF_DIR, filename)
-    ok, result, html = reviewer.review(filepath)
-    if ok:
-        return result, 200
-    return result, 200
+@app.route('/review', methods=['GET', 'POST'])
+def review():
+    if request.method == 'GET':
+        return render_template('review_proof.html')
+    if request.method == 'POST':
+        file = request.form['file']
+        path = PROOF_DIR.decode('utf8').encode('gbk')
+        filepath = os.path.join(path, file)
+        ok, result, html = reviewer.review(filepath)
+        # return render_template('review_proof.html', result=result)
+        if ok:
+            return render_template('review_proof.html', result="The proof file is verified successfully", ok = "True")
+        else:
+            return render_template('review_proof.html', result="Failed to verify: " + file, ok = "False")
 
 @app.route('/convert/<filename>', methods=['GET', 'POST'])
 def convert(filename):
