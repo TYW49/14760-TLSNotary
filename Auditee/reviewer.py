@@ -4,7 +4,7 @@ from __future__ import print_function
 from base64 import b64decode, b64encode
 from hashlib import md5, sha1, sha256
 from os.path import join
-from oracle import oracle_modulus
+# from oracle import oracle_modulus
 import binascii, hmac, os, platform,  tarfile
 import random, re, sys, time, zipfile
 import OpenSSL
