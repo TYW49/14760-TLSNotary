@@ -7,7 +7,7 @@ We mainly focus on implementing an additional protection mechanism above the Tra
 We finished coding the TLSNotary system and deploying Auditor on AWS, also we developed a web application to run the system. After that, we conducted 3 experiments on functional, latency and security. 
 
 
-![image](https://github.com/TYW49/14760-TLSNotary/blob/master/img/notarize.jpg)
-![image](https://github.com/TYW49/14760-TLSNotary/blob/master/img/review.jpg)
+![image](https://github.com/TYW49/14760-TLSNotary/blob/master/project%20implementation/img/notarize.jpg)
+![image](https://github.com/TYW49/14760-TLSNotary/blob/master/project%20implementation/img/review.jpg)
 
 
